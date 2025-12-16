@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K8s Script Runner Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header h1 i {
+            color: #667eea;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card i {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+
+        .stat-card .count {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .label {
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-pending { color: #ffc107; }
+        .status-running { color: #17a2b8; }
+        .status-completed { color: #28a745; }
+        .status-failed { color: #dc3545; }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .panel h2 {
+            color: #333;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel h2 i {
+            color: #667eea;
+        }
+
+        /* Script List */
+        .script-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .script-item {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .script-item:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .script-item.active {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .script-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .script-name {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .script-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .script-details {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Create Script Form */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea.form-control {
+            min-height: 150px;
+            font-family: monospace;
+            resize: vertical;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        /* Logs Panel */
+        .logs-panel {
+            grid-column: 1 / -1;
+        }
+
+        .logs-container {
+            background: #1e1e1e;
+            color: #f0f0f0;
+            border-radius: 10px;
+            padding: 20px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .log-line {
+            margin-bottom: 5px;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        .log-line.info { color: #4fc3f7; }
+        .log-line.success { color: #69f0ae; }
+        .log-line.error { color: #ff5252; }
+        .log-line.warning { color: #ffd740; }
+
+        .logs-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        /* Templates */
+        .templates {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .template-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .template-card:hover {
+            border-color: #667eea;
+            transform: translateY(-3px);
+        }
+
+        .template-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .template-desc {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Connection Status */
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .connection-status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .connection-status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #ccc;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .panel {
+                padding: 20px;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Connection Status -->
+        <div id="connectionStatus" class="connection-status">
+            <span class="status-dot"></span>
+            <span class="status-text">Connecting...</span>
+        </div>
+
+        <!-- Header -->
+        <div class="header">
+            <h1>
+                <i class="fas fa-terminal"></i>
+                K8s Script Runner Dashboard
+            </h1>
+            <p>Execute and monitor bash scripts in your Kubernetes cluster in real-time</p>
+
+            <div class="stats">
+                <div class="stat-card" onclick="refreshScripts()">
+                    <i class="fas fa-list status-pending"></i>
+                    <div class="count" id="totalScripts">0</div>
+                    <div class="label">Total Scripts</div>
+                </div>
+
+                <div class="stat-card" onclick="filterScripts('running')">
+                    <i class="fas fa-sync-alt status-running"></i>
+                    <div class="count" id="runningScripts">0</div>
+                    <div class="label">Running</div>
+                </div>
+
+                <div class="stat-card" onclick="filterScripts('completed')">
+                    <i class="fas fa-check-circle status-completed"></i>
+                    <div class="count" id="completedScripts">0</div>
+                    <div class="label">Completed</div>
+                </div>
+
+                <div class="stat-card" onclick="filterScripts('failed')">
+                    <i class="fas fa-times-circle status-failed"></i>
+                    <div class="count" id="failedScripts">0</div>
+                    <div class="label">Failed</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content">
+            <!-- Script List Panel -->
+            <div class="panel">
+                <h2><i class="fas fa-code"></i> Scripts</h2>
+                <div class="logs-controls">
+                    <button class="btn" onclick="refreshScripts()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <button class="btn btn-success" onclick="showCreateModal()">
+                        <i class="fas fa-plus"></i> New Script
+                    </button>
+                </div>
+                <div id="scriptList" class="script-list">
+                    <!-- Scripts will be loaded here -->
+                    <div class="empty-state">
+                        <i class="fas fa-code"></i>
+                        <p>No scripts found. Create your first script!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Script Details Panel -->
+            <div class="panel">
+                <h2><i class="fas fa-info-circle"></i> Script Details</h2>
+                <div id="scriptDetails">
+                    <div class="empty-state">
+                        <i class="fas fa-mouse-pointer"></i>
+                        <p>Select a script to view details</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Panel -->
+        <div class="panel logs-panel">
+            <h2><i class="fas fa-stream"></i> Live Logs</h2>
+            <div class="logs-controls">
+                <button class="btn" onclick="startLogStream()" id="btnStartStream">
+                    <i class="fas fa-play"></i> Start Stream
+                </button>
+                <button class="btn btn-secondary" onclick="stopLogStream()" id="btnStopStream" disabled>
+                    <i class="fas fa-stop"></i> Stop
+                </button>
+                <button class="btn btn-secondary" onclick="clearLogs()">
+                    <i class="fas fa-trash"></i> Clear
+                </button>
+                <span style="margin-left: auto; color: #666; font-size: 0.9rem;">
+                    <span id="logCount">0</span> lines
+                </span>
+            </div>
+            <div id="logsContainer" class="logs-container">
+                <!-- Logs will appear here -->
+                <div class="empty-state" style="color: #888;">
+                    <i class="fas fa-terminal"></i>
+                    <p>Logs will appear here when streaming</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Script Modal -->
+    <div id="createModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 20px; padding: 30px; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto;">
+            <h2 style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fas fa-plus"></i> Create New Script</span>
+                <button onclick="hideCreateModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
+            </h2>
+
+            <div style="margin-bottom: 20px;">
+                <h3 style="margin-bottom: 15px; color: #333;">Quick Templates</h3>
+                <div class="templates">
+                    <div class="template-card" onclick="loadTemplate('system')">
+                        <div class="template-name">System Info</div>
+                        <div class="template-desc">Get system information</div>
+                    </div>
+                    <div class="template-card" onclick="loadTemplate('long')">
+                        <div class="template-name">Long Running</div>
+                        <div class="template-desc">Test streaming with delays</div>
+                    </div>
+                    <div class="template-card" onclick="loadTemplate('python')">
+                        <div class="template-name">Python Script</div>
+                        <div class="template-desc">Run Python code</div>
+                    </div>
+                    <div class="template-card" onclick="loadTemplate('network')">
+                        <div class="template-name">Network Test</div>
+                        <div class="template-desc">Check connectivity</div>
+                    </div>
+                </div>
+            </div>
+
+            <form id="createForm" onsubmit="createScript(event)">
+                <div class="form-group">
+                    <label for="scriptName">Script Name</label>
+                    <input type="text" id="scriptName" class="form-control" placeholder="Enter script name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="scriptContent">Script Content</label>
+                    <textarea id="scriptContent" class="form-control" placeholder="Enter your bash script here..." rows="10" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="createdBy">Created By</label>
+                    <input type="text" id="createdBy" class="form-control" placeholder="Your name" value="web-client" required>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="hideCreateModal()">Cancel</button>
+                    <button type="submit" class="btn">
+                        <i class="fas fa-rocket"></i> Create & Run
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = 'http://localhost:8000';
+        const WS_BASE = 'ws://localhost:8000';
+
+        // State
+        let scripts = [];
+        let selectedScriptId = null;
+        let websocket = null;
+        let isStreaming = false;
+        let logLines = [];
+        let autoRefresh = true;
+
+        // DOM Elements
+        const scriptListEl = document.getElementById('scriptList');
+        const scriptDetailsEl = document.getElementById('scriptDetails');
+        const logsContainerEl = document.getElementById('logsContainer');
+        const connectionStatusEl = document.getElementById('connectionStatus');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            checkConnection();
+            refreshScripts();
+            startAutoRefresh();
+
+            // Check connection every 30 seconds
+            setInterval(checkConnection, 30000);
+        });
+
+        // Connection Management
+        async function checkConnection() {
+            try {
+                // Check API
+                const response = await fetch(`${API_BASE}/health`);
+                if (response.ok) {
+                    updateConnectionStatus(true);
+                } else {
+                    updateConnectionStatus(false);
+                }
+            } catch (error) {
+                updateConnectionStatus(false);
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusDot = connectionStatusEl.querySelector('.status-dot');
+            const statusText = connectionStatusEl.querySelector('.status-text');
+
+            if (connected) {
+                connectionStatusEl.className = 'connection-status connected';
+                statusDot.innerHTML = '<i class="fas fa-circle" style="color: #28a745;"></i>';
+                statusText.textContent = 'Connected';
+            } else {
+                connectionStatusEl.className = 'connection-status disconnected';
+                statusDot.innerHTML = '<i class="fas fa-circle" style="color: #dc3545;"></i>';
+                statusText.textContent = 'Disconnected';
+            }
+        }
+
+        // Script Management
+        async function refreshScripts() {
+            try {
+                showLoading(scriptListEl);
+
+                const response = await fetch(`${API_BASE}/gateway/runs`);
+                if (!response.ok) throw new Error('Failed to fetch scripts');
+
+                scripts = await response.json();
+                renderScriptList();
+                updateStats();
+
+                // Auto-select first script if none selected
+                if (!selectedScriptId && scripts.length > 0) {
+                    selectScript(scripts[0].id);
+                }
+
+            } catch (error) {
+                scriptListEl.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Error loading scripts: ${error.message}</p>
+                        <button class="btn" onclick="refreshScripts()" style="margin-top: 20px;">
+                            <i class="fas fa-sync-alt"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function renderScriptList() {
+            if (scripts.length === 0) {
+                scriptListEl.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-code"></i>
+                        <p>No scripts found. Create your first script!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            scriptListEl.innerHTML = scripts.map(script => `
+                <div class="script-item ${selectedScriptId === script.id ? 'active' : ''}"
+                     onclick="selectScript(${script.id})">
+                    <div class="script-header">
+                        <div class="script-name">${escapeHtml(script.name)}</div>
+                        <div class="script-status ${getStatusClass(script.status)}">
+                            ${getStatusIcon(script.status)} ${script.status}
+                        </div>
+                    </div>
+                    <div class="script-details">
+                        <span>ID: ${script.id}</span>
+                        <span>${formatDate(script.created_at)}</span>
+                    </div>
+                    ${script.created_by ? `<div style="color: #888; font-size: 0.85rem; margin-top: 5px;">By: ${escapeHtml(script.created_by)}</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function selectScript(scriptId) {
+            selectedScriptId = scriptId;
+            renderScriptList();
+            showScriptDetails(scriptId);
+        }
+
+        async function showScriptDetails(scriptId) {
+            try {
+                showLoading(scriptDetailsEl);
+
+                const response = await fetch(`${API_BASE}/gateway/runs/${scriptId}`);
+                if (!response.ok) throw new Error('Failed to fetch script details');
+
+                const script = await response.json();
+                renderScriptDetails(script);
+
+            } catch (error) {
+                scriptDetailsEl.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Error loading details: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderScriptDetails(script) {
+            const statusIcon = getStatusIcon(script.status);
+            const statusClass = getStatusClass(script.status);
+
+            scriptDetailsEl.innerHTML = `
+                <div style="margin-bottom: 25px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="color: #333; font-size: 1.5rem;">${escapeHtml(script.name)}</h3>
+                        <div class="script-status ${statusClass}" style="font-size: 1rem;">
+                            ${statusIcon} ${script.status}
+                        </div>
+                    </div>
+
+                    <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 15px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div>
+                                <strong>ID:</strong><br>
+                                <span style="color: #666;">${script.id}</span>
+                            </div>
+                            <div>
+                                <strong>Created:</strong><br>
+                                <span style="color: #666;">${formatDate(script.created_at)}</span>
+                            </div>
+                            ${script.started_at ? `
+                            <div>
+                                <strong>Started:</strong><br>
+                                <span style="color: #666;">${formatDate(script.started_at)}</span>
+                            </div>
+                            ` : ''}
+                            ${script.completed_at ? `
+                            <div>
+                                <strong>Completed:</strong><br>
+                                <span style="color: #666;">${formatDate(script.completed_at)}</span>
+                            </div>
+                            ` : ''}
+                            ${script.exit_code !== null ? `
+                            <div>
+                                <strong>Exit Code:</strong><br>
+                                <span style="color: #666;">${script.exit_code}</span>
+                            </div>
+                            ` : ''}
+                            ${script.pod_name ? `
+                            <div>
+                                <strong>Pod Name:</strong><br>
+                                <span style="color: #666;">${script.pod_name}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 style="margin-bottom: 10px; color: #333;">Script Content</h4>
+                    <div style="background: #f5f5f5; border-radius: 8px; padding: 15px; font-family: monospace; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">
+                        ${escapeHtml(script.script_content)}
+                    </div>
+                </div>
+
+                <div style="margin-top: 25px; display: flex; gap: 10px;">
+                    <button class="btn" onclick="startLogStream()" ${script.status === 'running' ? '' : 'disabled'}>
+                        <i class="fas fa-play"></i> Stream Logs
+                    </button>
+                    <button class="btn btn-secondary" onclick="copyToClipboard('${escapeHtml(script.script_content)}')">
+                        <i class="fas fa-copy"></i> Copy Script
+                    </button>
+                    ${script.status === 'running' ? `
+                    <button class="btn btn-danger" onclick="stopScript(${script.id})">
+                        <i class="fas fa-stop"></i> Stop Script
+                    </button>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // Create Script
+        function showCreateModal() {
+            document.getElementById('createModal').style.display = 'flex';
+        }
+
+        function hideCreateModal() {
+            document.getElementById('createModal').style.display = 'none';
+        }
+
+        function loadTemplate(type) {
+            const templates = {
+                system: `#!/bin/bash
+echo "=== System Information ==="
+uname -a
+echo ""
+echo "=== Date and Time ==="
+date
+echo ""
+echo "=== Current Directory ==="
+pwd
+ls -la
+echo ""
+echo "=== Script Completed ==="`,
+
+                long: `#!/bin/bash
+echo "Starting long-running process..."
+for i in {1..10}; do
+    echo "Step \$i/10: Processing..."
+    sleep 2
+done
+echo "Process completed successfully!"`,
+
+                python: `#!/usr/bin/env python3
+import sys
+import datetime
+
+print("Python Script Running in K8s")
+print("=" * 40)
+print(f"Python version: {sys.version}")
+print(f"Time: {datetime.datetime.now()}")
+print()
+print("Hello from Python!")
+print("=" * 40)`,
+
+                network: `#!/bin/bash
+echo "Testing network connectivity..."
+echo ""
+echo "Ping test to Google DNS:"
+ping -c 3 8.8.8.8
+echo ""
+echo "DNS resolution test:"
+nslookup google.com
+echo ""
+echo "HTTP test:"
+curl -s -I https://httpbin.org/get | head -5
+echo ""
+echo "Network test completed!"`
+            };
+
+            const nameMap = {
+                system: 'System Information',
+                long: 'Long Running Test',
+                python: 'Python Script',
+                network: 'Network Test'
+            };
+
+            document.getElementById('scriptName').value = nameMap[type];
+            document.getElementById('scriptContent').value = templates[type];
+        }
+
+        async function createScript(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('scriptName').value;
+            const content = document.getElementById('scriptContent').value;
+            const createdBy = document.getElementById('createdBy').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/gateway/runs`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        script: content,  // ← изменили на script
+                        status: "pending",  // ← добавляем статус, если модель его требует
+                        created_by: createdBy,
+                        namespace: 'default'
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error);
+                }
+
+                const result = await response.json();
+                alert(`✅ Script created successfully!\nID: ${result.id}`);
+
+                hideCreateModal();
+                refreshScripts();
+                selectScript(result.id);
+
+            } catch (error) {
+                alert(`❌ Failed to create script: ${error.message}`);
+            }
+        }
+
+        // Log Streaming
+        function startLogStream() {
+            if (!selectedScriptId) {
+                alert('Please select a script first');
+                return;
+            }
+
+            if (isStreaming) {
+                alert('Already streaming logs');
+                return;
+            }
+
+            isStreaming = true;
+            logLines = [];
+            updateLogControls();
+
+            const wsUrl = `${WS_BASE}/runs/${selectedScriptId}/logs/ws`;
+            websocket = new WebSocket(wsUrl);
+
+            websocket.onopen = function() {
+                addLog('🔌 Connected to WebSocket', 'info');
+                document.getElementById('btnStartStream').disabled = true;
+                document.getElementById('btnStopStream').disabled = false;
+            };
+
+            websocket.onmessage = function(event) {
+                addLog(event.data, 'info');
+            };
+
+            websocket.onerror = function(error) {
+                addLog(`❌ WebSocket error: ${error.message}`, 'error');
+            };
+
+            websocket.onclose = function() {
+                addLog('🔌 WebSocket connection closed', 'warning');
+                isStreaming = false;
+                updateLogControls();
+                document.getElementById('btnStartStream').disabled = false;
+                document.getElementById('btnStopStream').disabled = true;
+            };
+        }
+
+        function stopLogStream() {
+            if (websocket) {
+                websocket.close();
+            }
+            isStreaming = false;
+            updateLogControls();
+        }
+
+        function clearLogs() {
+            logLines = [];
+            renderLogs();
+        }
+
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+            logLines.push({
+                timestamp: timestamp,
+                message: message,
+                type: type
+            });
+
+            // Keep only last 1000 lines
+            if (logLines.length > 1000) {
+                logLines = logLines.slice(-1000);
+            }
+
+            renderLogs();
+        }
+
+        function renderLogs() {
+            document.getElementById('logCount').textContent = logLines.length;
+
+            if (logLines.length === 0) {
+                logsContainerEl.innerHTML = `
+                    <div class="empty-state" style="color: #888;">
+                        <i class="fas fa-terminal"></i>
+                        <p>Logs will appear here when streaming</p>
+                    </div>
+                `;
+                return;
+            }
+
+            logsContainerEl.innerHTML = logLines.map(log => `
+                <div class="log-line ${log.type}">
+                    <span style="color: #888;">[${log.timestamp}]</span> ${escapeHtml(log.message)}
+                </div>
+            `).join('');
+
+            // Auto-scroll to bottom
+            logsContainerEl.scrollTop = logsContainerEl.scrollHeight;
+        }
+
+        function updateLogControls() {
+            const startBtn = document.getElementById('btnStartStream');
+            const stopBtn = document.getElementById('btnStopStream');
+
+            if (isStreaming) {
+                startBtn.innerHTML = '<i class="fas fa-sync-alt pulse"></i> Streaming...';
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+            } else {
+                startBtn.innerHTML = '<i class="fas fa-play"></i> Start Stream';
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+        }
+
+        // Script Actions
+        async function stopScript(scriptId) {
+            if (!confirm('Are you sure you want to stop this script?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/gateway/runs/${scriptId}/stop`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    alert('Script stopped successfully');
+                    refreshScripts();
+                } else {
+                    throw new Error('Failed to stop script');
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        // Stats
+        function updateStats() {
+            const total = scripts.length;
+            const running = scripts.filter(s => s.status === 'running').length;
+            const completed = scripts.filter(s => s.status === 'completed').length;
+            const failed = scripts.filter(s => s.status === 'failed').length;
+
+            document.getElementById('totalScripts').textContent = total;
+            document.getElementById('runningScripts').textContent = running;
+            document.getElementById('completedScripts').textContent = completed;
+            document.getElementById('failedScripts').textContent = failed;
+        }
+
+        function filterScripts(status) {
+            // Highlight scripts with this status
+            const items = scriptListEl.querySelectorAll('.script-item');
+            items.forEach(item => {
+                const statusEl = item.querySelector('.script-status');
+                if (statusEl && statusEl.textContent.includes(status)) {
+                    item.style.backgroundColor = '#f0f8ff';
+                } else {
+                    item.style.backgroundColor = '';
+                }
+            });
+        }
+
+        // Auto-refresh
+        function startAutoRefresh() {
+            if (autoRefresh) {
+                setInterval(() => {
+                    if (!isStreaming) {
+                        refreshScripts();
+                    }
+                }, 5000); // Refresh every 5 seconds
+            }
+        }
+
+        // Utility Functions
+        function getStatusIcon(status) {
+            const icons = {
+                'pending': '⏳',
+                'running': '🔄',
+                'completed': '✅',
+                'failed': '❌',
+                'cancelled': '⏹️'
+            };
+            return icons[status] || '❓';
+        }
+
+        function getStatusClass(status) {
+            return `status-${status}`;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        }
+
+        function showLoading(element) {
+            element.innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 15px; color: #666;">Loading...</p>
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Script copied to clipboard!');
+            });
+        }
+
+        // Make functions globally available
+        window.refreshScripts = refreshScripts;
+        window.selectScript = selectScript;
+        window.showCreateModal = showCreateModal;
+        window.hideCreateModal = hideCreateModal;
+        window.loadTemplate = loadTemplate;
+        window.createScript = createScript;
+        window.startLogStream = startLogStream;
+        window.stopLogStream = stopLogStream;
+        window.clearLogs = clearLogs;
+        window.stopScript = stopScript;
+        window.filterScripts = filterScripts;
+        window.copyToClipboard = copyToClipboard;
+    </script>
+</body>
+</html>

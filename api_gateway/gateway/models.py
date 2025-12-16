@@ -6,7 +6,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 from sqlalchemy.orm import Mapped, mapped_column
 
-from database import Base
+from database import Base, TimeStampModel
 
 
 class ScriptStatus(enum.Enum):
@@ -16,7 +16,7 @@ class ScriptStatus(enum.Enum):
     failed = "failed"
 
 
-class Script(Base):
+class Script(TimeStampModel):
     __tablename__ = "scripts"
 
     id: Mapped[int] = mapped_column(primary_key=True)

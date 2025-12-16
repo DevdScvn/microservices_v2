@@ -1,12 +1,14 @@
 import logging
-from typing import Annotated
+from typing import Annotated, Optional, List
 
 from fastapi import APIRouter
+from sqlalchemy import select
 from starlette.websockets import WebSocketDisconnect
 
 from database import db_helper
 from gateway.crud import create_run, get_script
 from gateway.k8s_client import create_job_async, get_job_status
+from gateway.models import Script
 from gateway.shemas import ScriptOut, ScriptCreate
 
 import uuid
@@ -19,8 +21,6 @@ import asyncio
 
 router = APIRouter(prefix="/gateway", tags=["gate"])
 
-
-app = FastAPI(title="K8s Runner MVP")
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +44,27 @@ async def create_run_endpoint(payload: ScriptCreate,
     # create DB record
     run = await create_run(db, payload, job_name)
     return run
+
+
+@router.get("/runs", response_model=List[ScriptOut])
+async def get_scripts(
+        db: Annotated[AsyncSession, Depends(db_helper.session_getter)],
+        skip: int = 0,
+        limit: int = 100,
+        status: Optional[str] = None,
+):
+    """Получить список всех скриптов"""
+    query = select(Script)
+
+    if status:
+        query = query.where(Script.status == status)
+
+    query = query.offset(skip).limit(limit)
+
+    result = await db.execute(query)
+    scripts = result.scalars().all()
+
+    return scripts
 
 
 @router.get("/runs/{run_id}")
