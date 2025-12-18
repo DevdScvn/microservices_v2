@@ -1,15 +1,16 @@
 services:
-#  app:
-#    build:
-#      dockerfile: "./Dockerfile"
-#      context: ./
-#    container_name: web_service_v1
-#    environment:
-#      APP_CONFIG__DB__URL: "postgresql+asyncpg://user:password@pg:5432/micro"
-#    ports:
-#      - "5050:8000"
-#    depends_on:
-#      - pg
+
+  app:
+    build:
+      dockerfile: "./Dockerfile"
+      context: ./
+    container_name: web_service_v1
+    environment:
+      APP_CONFIG__DB__URL: "postgresql+asyncpg://user:password@pg:5432/user"
+    ports:
+      - "5050:8000"
+    depends_on:
+      - pg
 
   pg:
     image: postgres
