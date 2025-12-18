@@ -1,46 +1,26 @@
-from pydantic import BaseModel, Field
-from datetime import datetime
-from typing import Optional, Dict
+from pydantic import BaseModel
+from typing import Optional
 from enum import Enum
 
 
 class ScriptStatus(str, Enum):
-    PENDING = "pending"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
+    pending = "pending"
+    running = "running"
+    succeeded = "succeeded"
+    failed = "failed"
+    cancelled = "cancelled"
 
-
-# class ScriptCreate(BaseModel):
-#     name: str = Field(..., min_length=1, max_length=255)
-#     script_content: str = Field(..., min_length=1)
-#     namespace: Optional[str] = "default"
-#     created_by: Optional[str] = None
-#
-#
-# class ScriptResponse(BaseModel):
-#     id: int
-#     name: str
-#     status: ScriptStatus
-#     pod_name: Optional[str]
-#     exit_code: Optional[int]
 
 class ScriptCreate(BaseModel):
     name: Optional[str]
     script: str
     status: str
-    params: dict | None = None
+    params: Optional[dict] = None
 
 
 class ScriptOut(BaseModel):
     id: int
-    name: str | None
+    name: Optional[str] = None
     status: str
-    k8s_job_name: str | None
-
-
-# class LogStreamRequest(BaseModel):
-#     script_id: int
-#     follow: bool = True
+    k8s_job_name: Optional[str] = None
 

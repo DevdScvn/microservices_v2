@@ -1,19 +1,20 @@
 import enum
 
 
-from sqlalchemy import String, Enum
+from sqlalchemy import String, Enum, Text
 from sqlalchemy.dialects.postgresql import JSONB
 
 from sqlalchemy.orm import Mapped, mapped_column
 
-from database import Base, TimeStampModel
+from database import TimeStampModel
 
 
 class ScriptStatus(enum.Enum):
     pending = "pending"
     running = "running"
-    completed = "completed"
+    succeeded = "succeeded"
     failed = "failed"
+    cancelled = "cancelled"
 
 
 class Script(TimeStampModel):
@@ -27,6 +28,9 @@ class Script(TimeStampModel):
     k8s_job_name: Mapped[str] = mapped_column(String(256), nullable=True)
     params: Mapped[dict] = mapped_column(JSONB)
     exit_code: Mapped[int] = mapped_column(nullable=True)
+    logs: Mapped[dict] = mapped_column(JSONB, nullable=True)
+    pod_name: Mapped[str] = mapped_column(nullable=True)
+
 
 
 
